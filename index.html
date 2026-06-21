@@ -1145,21 +1145,41 @@ const remotePlayers = new Map(); // peerId -> { mesh, lastPos, targetPos, target
 
 function makePlayerMesh(isIt) {
   const group = new THREE.Group();
-  const bodyGeo = new THREE.CapsuleGeometry(0.4, 1.0, 4, 8);
   const bodyMat = new THREE.MeshStandardMaterial({
     color: isIt ? 0xff3864 : 0x00aaff, emissive: isIt ? 0x551018 : 0x002a3a, emissiveIntensity: 0.6, roughness: 0.5
   });
-  const body = new THREE.Mesh(bodyGeo, bodyMat);
-  body.position.y = 0.9;
-  body.castShadow = true;
-  group.add(body);
+
+  // Three.js r128 has no CapsuleGeometry — build the capsule silhouette from a
+  // cylinder (torso) plus two spheres (rounded top/bottom caps) instead.
+  const radius = 0.4, cylHeight = 0.6; // total visual height ~= cylHeight + 2*radius = 1.4
+  const bodyGroup = new THREE.Group();
+
+  const cylGeo = new THREE.CylinderGeometry(radius, radius, cylHeight, 12);
+  const cyl = new THREE.Mesh(cylGeo, bodyMat);
+  cyl.castShadow = true;
+  bodyGroup.add(cyl);
+
+  const capGeo = new THREE.SphereGeometry(radius, 12, 8);
+  const topCap = new THREE.Mesh(capGeo, bodyMat);
+  topCap.position.y = cylHeight / 2;
+  topCap.castShadow = true;
+  bodyGroup.add(topCap);
+
+  const bottomCap = new THREE.Mesh(capGeo, bodyMat);
+  bottomCap.position.y = -cylHeight / 2;
+  bottomCap.castShadow = true;
+  bodyGroup.add(bottomCap);
+
+  bodyGroup.position.y = 0.9;
+  group.add(bodyGroup);
+
   // direction indicator
   const noseGeo = new THREE.ConeGeometry(0.12, 0.3, 6);
   const nose = new THREE.Mesh(noseGeo, new THREE.MeshStandardMaterial({ color: 0xffffff }));
   nose.rotation.x = Math.PI/2;
   nose.position.set(0, 1.5, -0.45);
   group.add(nose);
-  group.userData.body = body;
+  group.userData.body = bodyGroup;
   group.userData.bodyMat = bodyMat;
   scene.add(group);
   return group;
