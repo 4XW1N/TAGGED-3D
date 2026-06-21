@@ -833,7 +833,21 @@ document.addEventListener('pointerlockchange', () => {
     el('resumeOverlay').style.display = pointerLocked ? 'none' : 'flex';
   }
 });
+document.addEventListener('pointerlockerror', () => {
+  // Some browsers briefly refuse re-lock immediately after an exit (e.g. right after
+  // Escape). Retry once on the next tick rather than leaving the player stuck.
+  setTimeout(() => {
+    if (Game.started && !pointerLocked) {
+      renderer.domElement.requestPointerLock();
+    }
+  }, 150);
+});
 renderer.domElement.addEventListener('click', () => {
+  if (Game.started && !pointerLocked) {
+    renderer.domElement.requestPointerLock();
+  }
+});
+el('resumeOverlay').addEventListener('click', () => {
   if (Game.started && !pointerLocked) {
     renderer.domElement.requestPointerLock();
   }
